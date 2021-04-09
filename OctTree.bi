@@ -12,12 +12,12 @@ Type Cuboid
 	mmax As Vector3
 	'BBox(0 To 7) As Vector3
 	Declare Function PointIsOnRay(p As Vector3,o As vector3,d As vector3) As boolean
-	Declare Function PointIsOnPlane(p As Vector3,v1 As vector3,v2 As vector3,v3 As vector3,v4 As vector3) As boolean
+	Declare Function PointIsOnPlane(p As Vector3,v0 As vector3,n As vector3) As boolean
 	Declare Function PointIsInsideBBox(p As Vector3) As boolean
 	Declare Function PointIsInsideBSphere(p As Vector3,sp As Vector3,r As single) As boolean
 	Declare Function CubeOverlapsBBox(b As Cuboid) As boolean
 	Declare Function SphereOverlapsBBox(p As vector3,r As single) As boolean
-	Declare Function PlaneOverlapsBBox(v1 As vector3,v2 As vector3,v3 As vector3,v4 As vector3) As boolean
+	Declare Function PlaneOverlapsBBox(v0 As vector3,n As vector3) As boolean
 	Declare Function RayOverlapsBBox(o As vector3,d As vector3) As boolean
 End Type
 Constructor Cuboid()
@@ -69,6 +69,21 @@ Function Cuboid.SphereOverlapsBBox(p As vector3,r As Single) As boolean
   Dim As single distance = ((x - p.x) * (x - p.x) +(y - p.y) * (y - p.y) + (z - p.z) * (z - p.z))
   return (distance <= (r*r))
 End Function
+Function Cuboid.PlaneOverlapsBBox(v0 As vector3,n As vector3) As boolean
+' Test if AABB b intersects plane p
+    ' Convert AABB to center-extents representation
+    Dim As Vector3 c = Vector3Scale(Vector3Add(this.mmax, this.mmin), 0.5f) ' Compute AABB center
+    Dim As Vector3 e = Vector3Subtract(this.mmax, c) ' Compute positive extents
+	 Dim d As Single=-(n.x*v0.x)-(n.y*v0.y)-(n.z*v0.z)
+    ' Compute the projection interval radius of b onto L(t) = b.c + t * p.n
+    Dim As Single r = e.x*Abs(n.x) + e.y*Abs(n.y) + e.z*Abs(n.z)
+
+    ' Compute distance of box center from plane
+    Dim As single s = Vector3DotProduct(n, c) - d
+
+    ' Intersection occurs when distance s falls within [-r,+r] interval
+    return Abs(s) <= r
+End Function
 Function Cuboid.RayOverlapsBBox(o As vector3,d As vector3) As boolean
 	'bool intersection(box b, ray r) {
     Dim As Double tmin = DBL_MIN
@@ -100,9 +115,19 @@ Function Cuboid.RayOverlapsBBox(o As vector3,d As vector3) As boolean
     return tmax >= tmin
 End Function
 
-Function Cuboid.PointIsOnPlane(p As Vector3,v1 As vector3,v2 As vector3,v3 As vector3,v4 As vector3) As boolean
- Return true
-'If ((p.x>=sp.x-r/2) And (p.x<=sp.x+r/2) And (p.y>=sp.y-r/2) And (p.y<=sp.y+r/2) And (p.z>=sp.z-r/2) And (p.z<=sp.z+r/2)) Then Return TRUE
+Function Cuboid.PointIsOnPlane(p As Vector3,v0 As vector3,n As vector3) As boolean
+    'signed distance of point P to plane V0,N
+    dim as single    sb, sn, sd
+    sn = -Vector3DotProduct( n, Vector3Subtract(p, v0))
+    sd = Vector3DotProduct(n, n)
+    sb = sn / sd
+
+   dim as Vector3 B = Vector3Add(p ,Vector3Scale( n , sb))
+    B=(Vector3Subtract(p, B))
+    'Dim l As Single=Vector3Length(B)
+    'Print b.x,b.y,b.z,l
+    'If l<=1 And l>=-0 Then Return true
+    If (B.x<=0.0001) And (B.x>=-0.0001) And (B.y<=0.0001) And (B.y>=-0.0001) And (B.z<=0.0001) And (B.z>=-0.0001) Then Return TRUE
 Return FALSE
 End Function
 Function Cuboid.PointIsOnRay(p As Vector3,o As vector3,d As vector3) As boolean
@@ -110,6 +135,7 @@ Function Cuboid.PointIsOnRay(p As Vector3,o As vector3,d As vector3) As boolean
 	s=vector3Normalize(s)
 	d=vector3Normalize(d)
 	Dim a As vector3=Vector3Subtract(d,s)
+	a=vector3Normalize(a)
 	'Print a.x,a.y,a.z
 	If (a.x<=0.0001) And (a.y<=0.0001) And (a.z<=0.0001) And _
 	(a.x>=-0.0001) And (a.y>=-0.0001) And (a.z>=-0.0001) Then Return TRUE
@@ -125,7 +151,7 @@ Type OctTree
 	Declare Sub insert(p As Vector3 Ptr)
 	Declare sub getPointsInCube(bound As Cuboid,arr As arrayList ptr)
 	Declare sub getPointsInSphere(sp As vector3,r As Single,arr As arrayList ptr)
-	Declare sub getPointsOnPlane(v1 As vector3,v2 As vector3,v3 As vector3,v4 As vector3,arr As arrayList ptr)
+	Declare sub getPointsOnPlane(v0 As vector3,n As vector3,arr As arrayList ptr)
 	Declare sub getPointsOnRay(origin As vector3,direction As vector3,arr As arrayList ptr)
 	Declare Sub render()
 
@@ -275,6 +301,23 @@ Sub OctTree.getPointsInSphere(sp As vector3,r As single,arr As arrayList Ptr)
 	EndIf
 
 End Sub
+sub OctTree.getPointsOnPlane(v0 As vector3,n As vector3,arr As arrayList ptr)
+		If (this.bounds.PlaneOverlapsBBox(v0,n)) Then
+		'Else
+		For i As Long =0 To this.points->count-1
+			Dim p As Vector3 Ptr=points->Get(i)
+			If This.bounds.PointIsOnPlane(*p,v0,n) Then
+				arr->add(p)
+			EndIf
+		Next
+		If Childs<>NULL Then
+			For i As Long = 0 To 7
+				Childs[i].getPointsOnPlane(v0,n,arr)
+			Next
+		EndIf
+		EndIf
+End Sub
+
 sub OctTree.getPointsOnRay(origin As vector3,direction As vector3,arr As arrayList ptr)
 		If (this.bounds.RayOverlapsBBox(origin,direction)) Then
 		'Else
