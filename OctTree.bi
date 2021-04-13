@@ -11,14 +11,22 @@ Type Cuboid
 	mmin As Vector3
 	mmax As Vector3
 	'BBox(0 To 7) As Vector3
-	Declare Function PointIsOnRay(p As Vector3,o As vector3,d As vector3) As boolean
-	Declare Function PointIsOnPlane(p As Vector3,v0 As vector3,n As vector3) As boolean
-	Declare Function PointIsInsideBBox(p As Vector3) As boolean
-	Declare Function PointIsInsideBSphere(p As Vector3,sp As Vector3,r As single) As boolean
-	Declare Function CubeOverlapsBBox(b As Cuboid) As boolean
-	Declare Function SphereOverlapsBBox(p As vector3,r As single) As boolean
-	Declare Function PlaneOverlapsBBox(v0 As vector3,n As vector3) As boolean
-	Declare Function RayOverlapsBBox(o As vector3,d As vector3) As boolean
+	Declare Function PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=1) As boolean
+	Declare Function PointIsOnPlane(p As Vector3,v0 As vector3,n As vector3,t As Single=1) As boolean
+	Declare Function PointIsOnFrontOffPlane(p As Vector3,v0 As vector3,n As vector3,t As Single=1) As boolean
+	Declare Function PointIsOnBackOffPlane(p As Vector3,v0 As vector3,n As vector3,t As Single=1) As boolean
+	Declare Function PointIsOnCube(p As Vector3) As boolean
+	Declare Function PointIsInsideCube(p As Vector3) As boolean
+	Declare Function PointIsOutsideCube(p As Vector3) As boolean
+	Declare Function PointIsOnSphere(p As Vector3,sp As Vector3,r As single) As boolean
+	Declare Function PointIsInsideSphere(p As Vector3,sp As Vector3,r As single) As boolean
+	Declare Function PointIsOutsideSphere(p As Vector3,sp As Vector3,r As single) As boolean
+	Declare Function PointIsInsideCylinder(p As vector3,co As Vector3, cd As Vector3, length As single, radius As single) As boolean
+	Declare Function CubeOverlapsCube(b As Cuboid) As boolean
+	Declare Function SphereOverlapsCube(p As vector3,r As single) As boolean
+	Declare Function CylinderOverlapsCube(co As Vector3, cd As Vector3, length As single, radius As Single) As boolean
+	Declare Function PlaneOverlapsCube(v0 As vector3,n As vector3) As boolean
+	Declare Function RayOverlapsCube(o As vector3,d As vector3,r As Single=0.00001) As boolean
 End Type
 Constructor Cuboid()
 
@@ -39,120 +47,180 @@ If mmin.x>mmax.x Then Swap mmin.x,mmax.x
 If mmin.y>mmax.y Then Swap mmin.y,mmax.y
 If mmin.z>mmax.z Then Swap mmin.z,mmax.z
 End Constructor
-Function Cuboid.PointIsInsideBBox(p As Vector3) As boolean
-If ((p.x>=mmin.x) And (p.x<mmax.x) And (p.y>=mmin.y) And (p.y<mmax.y) And (p.z>=mmin.z) And (p.z<mmax.z)) Then Return TRUE
-Return FALSE
+Function Cuboid.PointIsInsideCube(p As Vector3) As boolean
+	If ((p.x>=mmin.x) And (p.x<mmax.x) And (p.y>=mmin.y) And (p.y<mmax.y) And (p.z>=mmin.z) And (p.z<mmax.z)) Then Return TRUE
+	Return FALSE
 End Function
-Function Cuboid.CubeOverlapsBBox(b As Cuboid) As boolean
+Function Cuboid.CubeOverlapsCube(b As Cuboid) As boolean
 	If ((b.mmin.x<=mmax.x) and (b.mmax.x>=mmin.x) and (b.mmin.y<=mmax.y) and (b.mmax.y>=mmin.y) and (b.mmin.z<=mmax.z) And (b.mmax.z>=mmin.z)) Then Return TRUE
 	If ((mmin.x<=b.mmax.x) and (mmax.x>=b.mmin.x) and (mmin.y<=b.mmax.y) and (mmax.y>=b.mmin.y) and (mmin.z<=b.mmax.z) And (mmax.z>=b.mmin.z)) Then Return TRUE
 	Return FALSE
 End Function
-Function Cuboid.PointIsInsideBSphere(p As Vector3,sp As Vector3,r As Single) As boolean
+Function Cuboid.PointIsInsideSphere(p As Vector3,sp As Vector3,r As Single) As boolean
 	Dim x1 As Single=(p.x-sp.x)*(p.x-sp.x)
 	Dim y1 As Single=(p.y-sp.y)*(p.y-sp.y)
 	Dim z1 As Single=(p.z-sp.z)*(p.z-sp.z)
 	Dim ans As Single=x1+y1+z1
 	If ans<=(r*r) Then Return true
-'If ((p.x>=sp.x-r/2) And (p.x<=sp.x+r/2) And (p.y>=sp.y-r/2) And (p.y<=sp.y+r/2) And (p.z>=sp.z-r/2) And (p.z<=sp.z+r/2)) Then Return TRUE
-Return FALSE
-End Function
-Function Cuboid.SphereOverlapsBBox(p As vector3,r As Single) As boolean
-	 ' get box closest point to sphere center by clamping
-	 Dim max As Single=IIf(mmin.x>p.x,mmin.x,p.x)
-	 Dim may As Single=IIf(mmin.y>p.y,mmin.y,p.y)
-	 Dim maz As Single=IIf(mmin.z>p.z,mmin.z,p.z)
-  dim x As Single= iif(max<mmax.x,max,mmax.x)
-  dim y As Single= iif(may<mmax.y,may,mmax.y)
-  dim z As Single= iif(maz<mmax.z,maz,mmax.z)
-  ' this is the same as isPointInsideSphere
-  Dim As single distance = ((x - p.x) * (x - p.x) +(y - p.y) * (y - p.y) + (z - p.z) * (z - p.z))
-  return (distance <= (r*r))
-End Function
-Function Cuboid.PlaneOverlapsBBox(v0 As vector3,n As vector3) As boolean
-' Test if AABB b intersects plane p
-    ' Convert AABB to center-extents representation
-    Dim As Vector3 c = Vector3Scale(Vector3Add(this.mmax, this.mmin), 0.5f) ' Compute AABB center
-    Dim As Vector3 e = Vector3Subtract(this.mmax, c) ' Compute positive extents
-	 Dim d As Single=-(n.x*v0.x)-(n.y*v0.y)-(n.z*v0.z)
-    ' Compute the projection interval radius of b onto L(t) = b.c + t * p.n
-    Dim As Single r = e.x*Abs(n.x) + e.y*Abs(n.y) + e.z*Abs(n.z)
-
-    ' Compute distance of box center from plane
-    Dim As single s = Vector3DotProduct(n, c) - d
-
-    ' Intersection occurs when distance s falls within [-r,+r] interval
-    return Abs(s) <= r
-End Function
-Function Cuboid.RayOverlapsBBox(o As vector3,d As vector3) As boolean
-	'bool intersection(box b, ray r) {
-    Dim As Double tmin = DBL_MIN
-    Dim As Double tmax = DBL_MAX
-	 Dim As Double tx1,tx2,ty1,ty2,tz1,tz2
-    if (d.x <> 0.0)  Then
-        tx1 = (mmin.x - o.x)/d.x
-        tx2 = (mmax.x - o.x)/d.x
-
-        tmin = max(tmin, min(tx1, tx2))
-        tmax = min(tmax, max(tx1, tx2))
-    EndIf
-
-    if (d.y <> 0.0) Then
-        ty1 = (mmin.y - o.y)/d.y
-        ty2 = (mmax.y - o.y)/d.y
-
-        tmin = max(tmin, min(ty1, ty2))
-        tmax = min(tmax, max(ty1, ty2))
-    EndIf
-    if (d.z <> 0.0) Then
-        tz1 = (mmin.z - o.z)/d.z
-        tz2 = (mmax.z - o.z)/d.z
-
-        tmin = max(tmin, min(tz1, tz2))
-        tmax = min(tmax, max(tz1, tz2))
-    EndIf
-
-    return tmax >= tmin
-End Function
-
-Function Cuboid.PointIsOnPlane(p As Vector3,v0 As vector3,n As vector3) As boolean
-    'signed distance of point P to plane V0,N
-    dim as single    sb, sn, sd
-    sn = -Vector3DotProduct( n, Vector3Subtract(p, v0))
-    sd = Vector3DotProduct(n, n)
-    sb = sn / sd
-
-   dim as Vector3 B = Vector3Add(p ,Vector3Scale( n , sb))
-    B=(Vector3Subtract(p, B))
-    'Dim l As Single=Vector3Length(B)
-    'Print b.x,b.y,b.z,l
-    'If l<=1 And l>=-0 Then Return true
-    If (B.x<=0.0001) And (B.x>=-0.0001) And (B.y<=0.0001) And (B.y>=-0.0001) And (B.z<=0.0001) And (B.z>=-0.0001) Then Return TRUE
-Return FALSE
-End Function
-Function Cuboid.PointIsOnRay(p As Vector3,o As vector3,d As vector3) As boolean
-	Dim s As vector3=Vector3Subtract(p,o)
-	s=vector3Normalize(s)
-	d=vector3Normalize(d)
-	Dim a As vector3=Vector3Subtract(d,s)
-	a=vector3Normalize(a)
-	'Print a.x,a.y,a.z
-	If (a.x<=0.0001) And (a.y<=0.0001) And (a.z<=0.0001) And _
-	(a.x>=-0.0001) And (a.y>=-0.0001) And (a.z>=-0.0001) Then Return TRUE
+	'If ((p.x>=sp.x-r/2) And (p.x<=sp.x+r/2) And (p.y>=sp.y-r/2) And (p.y<=sp.y+r/2) And (p.z>=sp.z-r/2) And (p.z<=sp.z+r/2)) Then Return TRUE
 	Return FALSE
 End Function
+Function Cuboid.SphereOverlapsCube(p As vector3,r As Single) As boolean
+	' get box closest point to sphere center by clamping
+	Dim max As Single=IIf(mmin.x>p.x,mmin.x,p.x)
+	Dim may As Single=IIf(mmin.y>p.y,mmin.y,p.y)
+	Dim maz As Single=IIf(mmin.z>p.z,mmin.z,p.z)
+	dim x As Single= iif(max<mmax.x,max,mmax.x)
+	dim y As Single= iif(may<mmax.y,may,mmax.y)
+	dim z As Single= iif(maz<mmax.z,maz,mmax.z)
+	' this is the same as isPointInsideSphere
+	Dim As single distance = ((x - p.x) * (x - p.x) +(y - p.y) * (y - p.y) + (z - p.z) * (z - p.z))
+	return (distance <= (r*r))
+End Function
+Function Cuboid.PlaneOverlapsCube(v0 As vector3,n As vector3) As boolean
+	' Test if AABB b intersects plane p
+	' Convert AABB to center-extents representation
+	Dim As Vector3 c = Vector3Scale(Vector3Add(this.mmax, this.mmin), 0.5f) ' Compute AABB center
+	Dim As Vector3 e = Vector3Subtract(this.mmax, c) ' Compute positive extents
+	Dim d As Single=-(n.x*v0.x)-(n.y*v0.y)-(n.z*v0.z)
+	' Compute the projection interval radius of b onto L(t) = b.c + t * p.n
+	Dim As Single r = e.x*Abs(n.x) + e.y*Abs(n.y) + e.z*Abs(n.z)
 
+	' Compute distance of box center from plane
+	Dim As single s = Vector3DotProduct(n, c) - d
 
+	' Intersection occurs when distance s falls within [-r,+r] interval
+	return Abs(s) <= r
+End Function
+Function Cuboid.RayOverlapsCube(o As vector3,d As vector3,r As Single=0.00001) As boolean
+	'bool intersection(box b, ray r) {
+	Dim As Double tmin = DBL_MIN
+	Dim As Double tmax = DBL_MAX
+	Dim As Double tx1,tx2,ty1,ty2,tz1,tz2
+	if (d.x <> 0.0)  Then
+		tx1 = (mmin.x - (o.x))/d.x
+		tx2 = (mmax.x - (o.x))/d.x
 
-Type OctTree
+		tmin = max(tmin, min(tx1, tx2))
+		tmax = min(tmax, max(tx1, tx2))
+	EndIf
+
+	if (d.y <> 0.0) Then
+		ty1 = (mmin.y - (o.y))/d.y
+		ty2 = (mmax.y - (o.y))/d.y
+
+		tmin = max(tmin, min(ty1, ty2))
+		tmax = min(tmax, max(ty1, ty2))
+	EndIf
+	if (d.z <> 0.0) Then
+		tz1 = (mmin.z - (o.z))/d.z
+		tz2 = (mmax.z - (o.z))/d.z
+
+		tmin = max(tmin, min(tz1, tz2))
+		tmax = min(tmax, max(tz1, tz2))
+	EndIf
+
+	return ((tmax*r) >= (tmin*r))
+End Function
+
+Function Cuboid.PointIsOnPlane(p As Vector3,v0 As vector3,n As vector3,t As Single=1) As boolean
+	'signed distance of point P to plane V0,N
+	dim as single    sb, sn, sd
+	sn = -Vector3DotProduct( n, Vector3Subtract(p, v0))
+	sd = Vector3DotProduct(n, n)
+	sb = sn / sd
+
+	dim as Vector3 B = Vector3Add(p ,Vector3Scale( n , sb))
+	B=(Vector3Subtract(p, B))
+	'Print B.x,B.y,B.z
+	'Dim l As Single=Vector3Length(B)
+	'Print b.x,b.y,b.z,l
+	'If l<=1 And l>=-0 Then Return true
+	If (B.x<=t) And (B.x>=-t) And (B.y<=t) And (B.y>=-t) And (B.z<=t) And (B.z>=-t) Then Return TRUE
+	Return FALSE
+End Function
+Function Cuboid.PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=1) As boolean
+	Dim gpo As vector3=Vector3Subtract(p,o)
+	gpo=vector3Normalize(gpo)
+	d=vector3Normalize(d)
+	Dim c As vector3=Vector3CrossProduct(o,d)
+	Dim dgpo_diff As vector3=Vector3Subtract(d,gpo)
+	dgpo_diff=vector3Normalize(dgpo_diff)
+	'Dim rr As Vector3=Vector3Scale(c,r)
+	'r=Vector3Length(rr)
+	'Print a.x,a.y,a.z
+	If (dgpo_diff.x<=r) And (dgpo_diff.y<=r) And (dgpo_diff.z<=r) And _
+	(dgpo_diff.x>=-r) And (dgpo_diff.y>=-r) And (dgpo_diff.z>=-r) Then Return TRUE
+	Return FALSE
+End Function
+Function Cuboid.PointIsInsideCylinder(p As vector3,co As Vector3, cd As Vector3, length As single, radius As single) As boolean
+
+	Dim As Single dx, dy, dz	' vector d  from line segment point 1 to point 2
+	Dim As Single pdx, pdy, pdz ' vector pd from point 1 to test point
+	Dim As Single dot, dsq
+
+	dx = (cd.x*length) - co.x	' translate so pt1 is origin.  Make vector from
+	dy = (cd.y*length) - co.y  ' pt1 to pt2.  Need for this is easily eliminated
+	dz = (cd.z*length) - co.z
+
+	pdx = p.x - co.x		' vector from pt1 to test point.
+	pdy = p.y - co.y
+	pdz = p.z - co.z
+
+	' Dot the d and pd vectors to see if point lies behind the
+	' cylinder cap at pt1.x, pt1.y, pt1.z
+
+	dot = (pdx * dx + pdy * dy + pdz * dz)
+
+	' If dot is less than zero the point is behind the pt1 cap.
+	' If greater than the cylinder axis line segment length squared
+	' then the point is outside the other end cap at pt2.
+	Dim lengthsq As Single=length*length
+	if( ((dot) > 0.0f) and ((dot) < lengthsq) ) Then
+		'	Return FALSE
+		'else
+		' Point lies within the parallel caps, so find
+		' distance squared from point to line, using the fact that sin^2 + cos^2 = 1
+		' the dot = cos() * |d||pd|, and cross*cross = sin^2 * |d|^2 * |pd|^2
+		' Carefull: '*' means mult for scalars and dotproduct for vectors
+		' In short, where dist is pt distance to cyl axis:
+		' dist = sin( pd to d ) * |pd|
+		' distsq = dsq = (1 - cos^2( pd to d)) * |pd|^2
+		' dsq = ( 1 - (pd * d)^2 / (|pd|^2 * |d|^2) ) * |pd|^2
+		' dsq = pd * pd - dot * dot / lengthsq
+		'  where lengthsq is d*d or |d|^2 that is passed into this function
+
+		' distance squared to the cylinder axis:
+
+		dsq = (pdx*pdx + pdy*pdy + pdz*pdz) - (dot*dot)/lengthsq
+		Dim radiussq As Single=radius*radius
+		if( dsq <= radiussq ) Then
+			Return TRUE
+		Else
+			Return FALSE  ' return distance squared to axis
+		EndIf
+	EndIf
+End Function
+Function Cuboid.CylinderOverlapsCube(co As Vector3, cd As Vector3, length As single, radius As Single) As boolean
+	Return TRUE
+End Function
+type OctTree
 	Declare Constructor()
 	Declare Constructor(bounds As Cuboid,cap As Long)
 	Declare Destructor()
 	Declare Sub insert(p As Vector3 Ptr)
-	Declare sub getPointsInCube(bound As Cuboid,arr As arrayList ptr)
-	Declare sub getPointsInSphere(sp As vector3,r As Single,arr As arrayList ptr)
-	Declare sub getPointsOnPlane(v0 As vector3,n As vector3,arr As arrayList ptr)
-	Declare sub getPointsOnRay(origin As vector3,direction As vector3,arr As arrayList ptr)
+	Declare sub getPointsInCube(arr As arrayList Ptr,bound As Cuboid)
+	Declare sub getPointsOnCube(arr As arrayList Ptr,bound As Cuboid)
+	Declare sub getPointsOutCube(arr As arrayList Ptr,bound As Cuboid)
+	Declare sub getPointsInSphere(arr As arrayList Ptr,sp As vector3,r As Single)
+	Declare sub getPointsInCylinder(arr As arrayList Ptr,co As vector3,cd As Vector3,length As Single,r As Single)
+	Declare sub getPointsOnPlane(arr As arrayList Ptr,v0 As vector3,n As vector3)
+	Declare sub getPointsOnRay(arr As arrayList Ptr,origin As vector3,direction As vector3,r As Single=0.00001)
+
+	Declare sub getCuboidsInCube(arr As arrayList Ptr,bound As Cuboid)
+	Declare sub getCuboidsInSphere(arr As arrayList Ptr,sp As vector3,r As Single)
+	Declare sub getCuboidsOnPlane(arr As arrayList Ptr,v0 As vector3,n As vector3)
+	Declare sub getCuboidsOnRay(arr As arrayList Ptr,v0 As vector3,n As vector3)
 	Declare Sub render()
 
 	bounds As Cuboid
@@ -178,84 +246,66 @@ Destructor OctTree()
 End Destructor
 
 Sub OctTree.insert(p As Vector3 Ptr)
-	If Not(this.bounds.PointIsInsideBBox(*p)) Then Exit Sub
-	If (this.points->count<this.capacity) then
+	If Not(this.bounds.PointIsInsideCube(*p)) Then Exit Sub
+	If (this.points->count<this.capacity) And (this.subdivided=FALSE) then
 		this.points->add(p)
-		'Print "insert"
-		'this.subdivided=FALSE
 	ElseIf this.subdivided=FALSE then
-		'Print "subdivide"
 		this.Childs=New OctTree[8]'RL_CALLOC(8,SizeOf(OctTree))
 		Dim b As Cuboid
 		Dim sp As Vector3
 		Dim sv As Vector3=Vector3Scale(this.bounds.size,0.5)
-		sp=Vector3(bounds.posi.x-sv.x/2,bounds.posi.y-sv.y/2,bounds.posi.z-sv.z/2)
-		'im blind of a solution. how to calculate the boundary of the cuboid as fast as posible and in the right way?
+		Dim sv2 As Vector3=Vector3Scale(sv,0.5)
+		sp=Vector3(bounds.posi.x-sv2.x,bounds.posi.y-sv2.y,bounds.posi.z-sv2.z)
+
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
 		Childs[0].Constructor(b,this.capacity)
-		'Childs[0].bounds=b
-		'Childs[0].capacity=this.Capacity
-		'Childs[0].subdivided=FALSE
 
-		sp=Vector3(bounds.posi.x+sv.x/2,bounds.posi.y-sv.y/2,bounds.posi.z-sv.z/2)
+		sp=Vector3(bounds.posi.x+sv2.x,bounds.posi.y-sv2.y,bounds.posi.z-sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		'im blind of a solution. how to calculate the boundary of the cuboid as fast as posible and in the right way?
 		Childs[1].Constructor(b,this.capacity)
-		'Childs[1].bounds=b'Vector3Add(b.posi,Vector3Scale(b.size,0.5)) 'this seams to me wrong
-		'Childs[1].capacity=this.Capacity
-		'Childs[1].subdivided=FALSE
 
-		sp=Vector3(bounds.posi.x-sv.x/2,bounds.posi.y+sv.y/2,bounds.posi.z-sv.z/2)
+		sp=Vector3(bounds.posi.x-sv2.x,bounds.posi.y+sv2.y,bounds.posi.z-sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		'im blind of a solution. how to calculate the boundary of the cuboid as fast as posible and in the right way?
 		Childs[2].Constructor(b,this.capacity)
-		'Childs[2].bounds=b'Vector3Add(b.posi,Vector3Scale(b.size,0.5)) 'this seams to me wrong
-		'Childs[2].capacity=this.Capacity
-		'Childs[2].subdivided=FALSE
 
-		sp=Vector3(bounds.posi.x+sv.x/2,bounds.posi.y+sv.y/2,bounds.posi.z-sv.z/2)
+		sp=Vector3(bounds.posi.x+sv2.x,bounds.posi.y+sv2.y,bounds.posi.z-sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		'im blind of a solution. how to calculate the boundary of the cuboid as fast as posible and in the right way?
 		Childs[3].Constructor(b,this.capacity)
-		'Childs[3].bounds=b'Vector3Add(b.posi,Vector3Scale(b.size,0.5)) 'this seams to me wrong
-		'Childs[3].capacity=this.Capacity
-		'Childs[3].subdivided=FALSE
 
-		sp=Vector3(bounds.posi.x-sv.x/2,bounds.posi.y-sv.y/2,bounds.posi.z+sv.z/2)
+		sp=Vector3(bounds.posi.x-sv2.x,bounds.posi.y-sv2.y,bounds.posi.z+sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		'im blind of a solution. how to calculate the boundary of the cuboid as fast as posible and in the right way?
 		Childs[4].Constructor(b,this.capacity)
-		'Childs[4].bounds=b'Vector3Add(b.posi,Vector3Scale(b.size,0.5)) 'this seams to me wrong
-		'Childs[4].capacity=this.Capacity
-		'Childs[4].subdivided=FALSE
 
-		sp=Vector3(bounds.posi.x-sv.x/2,bounds.posi.y+sv.y/2,bounds.posi.z+sv.z/2)
+		sp=Vector3(bounds.posi.x-sv2.x,bounds.posi.y+sv2.y,bounds.posi.z+sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		'im blind of a solution. how to calculate the boundary of the cuboid as fast as posible and in the right way?
 		Childs[5].Constructor(b,this.capacity)
-		'Childs[5].bounds=b'Vector3Add(b.posi,Vector3Scale(b.size,0.5)) 'this seams to me wrong
-		'Childs[5].capacity=this.Capacity
-		'Childs[5].subdivided=FALSE
 
-		sp=Vector3(bounds.posi.x+sv.x/2,bounds.posi.y-sv.y/2,bounds.posi.z+sv.z/2)
+		sp=Vector3(bounds.posi.x+sv2.x,bounds.posi.y-sv2.y,bounds.posi.z+sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		'im blind of a solution. how to calculate the boundary of the cuboid as fast as posible and in the right way?
 		Childs[6].Constructor(b,this.capacity)
-		'Childs[6].bounds=b'Vector3Add(b.posi,Vector3Scale(b.size,0.5)) 'this seams to me wrong
-		'Childs[6].capacity=this.Capacity
-		'Childs[6].subdivided=FALSE
 
-		sp=Vector3(bounds.posi.x+sv.x/2,bounds.posi.y+sv.y/2,bounds.posi.z+sv.z/2)
+		sp=Vector3(bounds.posi.x+sv2.x,bounds.posi.y+sv2.y,bounds.posi.z+sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		'im blind of a solution. how to calculate the boundary of the cuboid as fast as posible and in the right way?
 		Childs[7].Constructor(b,this.capacity)
-		'Childs[7].bounds=b'Vector3Add(b.posi,Vector3Scale(b.size,0.5)) 'this seams to me wrong
-		'Childs[7].capacity=this.Capacity
-		'Childs[7].subdivided=FALSE
 
 		this.subdivided=TRUE
 	EndIf
 	If Childs<>NULL Then
+		'remove point from this cuboid and insert in the child
+		While this.points->count>0
+			dim i As Long=this.points->count-1
+			Dim p1 As Vector3 Ptr=this.points->get(i)
+			Childs[0].insert(p1)
+			Childs[1].insert(p1)
+			Childs[2].insert(p1)
+			Childs[3].insert(p1)
+			Childs[4].insert(p1)
+			Childs[5].insert(p1)
+			Childs[6].insert(p1)
+			Childs[7].insert(p1)
+			this.points->removeLast()
+		Wend
+		'insert point in child
 		Childs[0].insert(p)
 		Childs[1].insert(p)
 		Childs[2].insert(p)
@@ -267,89 +317,136 @@ Sub OctTree.insert(p As Vector3 Ptr)
 	EndIf
 	'endif
 End Sub
-Sub OctTree.getPointsInCube(bound As Cuboid,arr As arrayList Ptr)
-	If (this.bounds.CubeOverlapsBBox(bound)) Then
+Sub OctTree.getPointsInCube(arr As arrayList Ptr,bound As Cuboid)
+	If (this.bounds.CubeOverlapsCube(bound)) Then
+		'Else
+		If Not(this.subdivided) Then
+			For i As Long =0 To this.points->count-1
+				Dim p As Vector3 Ptr=points->Get(i)
+				If bound.PointIsInsideCube(*p) Then
+					arr->add(p)
+				EndIf
+			Next
+		Else
+			If Childs<>NULL Then
+				For i As Long = 0 To 7
+					Childs[i].getPointsInCube(arr,bound)
+				Next
+			EndIf
+		endif
+	EndIf
+
+End Sub
+Sub OctTree.getPointsOutCube(arr As arrayList Ptr,bound As Cuboid)
+	If (this.bounds.CubeOverlapsCube(bound)) Then
 		'Else
 		For i As Long =0 To this.points->count-1
 			Dim p As Vector3 Ptr=points->Get(i)
-			If bound.PointIsInsideBBox(*p) Then
+			If bound.PointIsInsideCube(*p) Then
 				arr->add(p)
 			EndIf
 		Next
 		If Childs<>NULL Then
 			For i As Long = 0 To 7
-				Childs[i].getPointsInCube(bound,arr)
+				Childs[i].getPointsInCube(arr,bound)
 			Next
 		EndIf
 	EndIf
 
 End Sub
-Sub OctTree.getPointsInSphere(sp As vector3,r As single,arr As arrayList Ptr)
-	If (this.bounds.SphereOverlapsBBox(sp,r)) Then
+Sub OctTree.getPointsInSphere(arr As arrayList Ptr,sp As vector3,r As single)
+	If (this.bounds.SphereOverlapsCube(sp,r)) Then
 		'Else
-		For i As Long =0 To this.points->count-1
-			Dim p As Vector3 Ptr=points->Get(i)
-			If This.bounds.PointIsInsideBSphere(*p,sp,r) Then
-				arr->add(p)
-			EndIf
-		Next
-		If Childs<>NULL Then
-			For i As Long = 0 To 7
-				Childs[i].getPointsInSphere(sp,r,arr)
+		If Not(this.subdivided) Then
+			For i As Long =0 To this.points->count-1
+				Dim p As Vector3 Ptr=points->Get(i)
+				If This.bounds.PointIsInsideSphere(*p,sp,r) Then
+					arr->add(p)
+				EndIf
 			Next
+		else
+			If Childs<>NULL Then
+				For i As Long = 0 To 7
+					Childs[i].getPointsInSphere(arr,sp,r)
+				Next
+			EndIf
 		EndIf
 	EndIf
 
 End Sub
-sub OctTree.getPointsOnPlane(v0 As vector3,n As vector3,arr As arrayList ptr)
-		If (this.bounds.PlaneOverlapsBBox(v0,n)) Then
+sub OctTree.getPointsInCylinder(arr As arrayList Ptr,co As vector3,cd As Vector3,length As Single,r As Single)
+	If (this.bounds.CylinderOverlapsCube(co,cd,length,r)) Then
 		'Else
-		For i As Long =0 To this.points->count-1
-			Dim p As Vector3 Ptr=points->Get(i)
-			If This.bounds.PointIsOnPlane(*p,v0,n) Then
-				arr->add(p)
-			EndIf
-		Next
-		If Childs<>NULL Then
-			For i As Long = 0 To 7
-				Childs[i].getPointsOnPlane(v0,n,arr)
+		If Not(this.subdivided) Then
+			For i As Long =0 To this.points->count-1
+				Dim p As Vector3 Ptr=points->Get(i)
+				If This.bounds.PointIsInsideCylinder(*p,co,cd,length,r) Then
+					arr->add(p)
+				EndIf
 			Next
+		else
+			If Childs<>NULL Then
+				For i As Long = 0 To 7
+					Childs[i].getPointsInCylinder(arr,co,cd,length,r)
+				Next
+			EndIf
 		EndIf
+	EndIf
+
+End Sub
+sub OctTree.getPointsOnPlane(arr As arrayList Ptr,v0 As vector3,n As vector3)
+	If (this.bounds.PlaneOverlapsCube(v0,n)) Then
+		'Else
+		If Not(this.subdivided) Then
+			For i As Long =0 To this.points->count-1
+				Dim p As Vector3 Ptr=points->Get(i)
+				If This.bounds.PointIsOnPlane(*p,v0,n) Then
+					arr->add(p)
+				EndIf
+			Next
+		else
+			If Childs<>NULL Then
+				For i As Long = 0 To 7
+					Childs[i].getPointsOnPlane(arr,v0,n)
+				Next
+			EndIf
 		EndIf
+	EndIf
 End Sub
 
-sub OctTree.getPointsOnRay(origin As vector3,direction As vector3,arr As arrayList ptr)
-		If (this.bounds.RayOverlapsBBox(origin,direction)) Then
+sub OctTree.getPointsOnRay(arr As arrayList Ptr,origin As vector3,direction As vector3,r As Single=0.00001)
+	If (this.bounds.RayOverlapsCube(origin,direction,r)) Then
 		'Else
-		For i As Long =0 To this.points->count-1
-			Dim p As Vector3 Ptr=points->Get(i)
-			If This.bounds.PointIsOnRay(*p,origin,direction) Then
-				arr->add(p)
-			EndIf
-		Next
-		If Childs<>NULL Then
-			For i As Long = 0 To 7
-				Childs[i].getPointsOnRay(origin,direction,arr)
+		If Not(this.subdivided) Then
+			For i As Long =0 To this.points->count-1
+				Dim p As Vector3 Ptr=points->Get(i)
+				If This.bounds.PointIsOnRay(*p,origin,direction,r) Then
+					arr->add(p)
+				EndIf
 			Next
+		else
+			If Childs<>NULL Then
+				For i As Long = 0 To 7
+					Childs[i].getPointsOnRay(arr,origin,direction,r)
+				Next
+			EndIf
 		EndIf
 	EndIf
 End Sub
 
 Sub OctTree.render()
-	'Print this.subdivided,this.points->count
 	If (this.subdivided=TRUE) Then
-		'Print "Child"
 		If (this.Childs<>NULL) Then
 			For i As Long=0 To 7
 				this.Childs[i].render()
 			Next
 		EndIf
 	Else
-		DrawCubeWiresV(this.bounds.posi,this.bounds.size,RayColor(255,0,0,255))
+		DrawCubeWiresV(this.bounds.posi,this.bounds.size,RayColor(0,0,0,16))
 	EndIf
 	For i As Long=0 To this.points->count-1
 		Dim p As Vector3 Ptr=this.points->get(i)
-		DrawCube(*p,.5,.5,.5,RayColor(255,0,0,255))
+		DrawCube(*p,.5,.5,.5,RayColor(0,0,0,64))
 	Next
 
 End Sub
