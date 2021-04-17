@@ -12,20 +12,20 @@ Type Cuboid
 	mmax As Vector3
 	'BBox(0 To 7) As Vector3
 	Declare Function PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=1) As boolean
-	Declare Function PointIsOnPlane(p As Vector3,v0 As vector3,n As vector3,t As Single=1) As boolean
-	Declare Function PointIsOnFrontOffPlane(p As Vector3,v0 As vector3,n As vector3,t As Single=1) As boolean
-	Declare Function PointIsOnBackOffPlane(p As Vector3,v0 As vector3,n As vector3,t As Single=1) As boolean
-	Declare Function PointIsOnCube(p As Vector3) As boolean
+	Declare Function PointIsOnPlane(p As Vector3,n As vector3,d As Single=1) As single
+	Declare Function PointIsOnFrontOffPlane(p As Vector3,v0 As vector3,n As vector3,d As Single=1) As boolean
+	Declare Function PointIsOnBackOffPlane(p As Vector3,v0 As vector3,n As vector3,d As Single=1) As boolean
+	Declare Function PointIsOnCube(p As Vector3,t As Single=1) As boolean
 	Declare Function PointIsInsideCube(p As Vector3) As boolean
 	Declare Function PointIsOutsideCube(p As Vector3) As boolean
-	Declare Function PointIsOnSphere(p As Vector3,sp As Vector3,r As single) As boolean
 	Declare Function PointIsInsideSphere(p As Vector3,sp As Vector3,r As single) As boolean
+	Declare Function PointIsOnSphere(p As Vector3,sp As Vector3,r As Single,t As Single=1) As boolean
 	Declare Function PointIsOutsideSphere(p As Vector3,sp As Vector3,r As single) As boolean
-	Declare Function PointIsInsideCylinder(p As vector3,co As Vector3, cd As Vector3, length As single, radius As single) As boolean
+	Declare Function PointIsInsideCylinder(p As vector3,co As Vector3, cd As Vector3, length As single, radius As single) As single
 	Declare Function CubeOverlapsCube(b As Cuboid) As boolean
 	Declare Function SphereOverlapsCube(p As vector3,r As single) As boolean
 	Declare Function CylinderOverlapsCube(co As Vector3, cd As Vector3, length As single, radius As Single) As boolean
-	Declare Function PlaneOverlapsCube(v0 As vector3,n As vector3) As boolean
+	Declare Function PlaneOverlapsCube(n As vector3,d As Single=1) As boolean
 	Declare Function RayOverlapsCube(o As vector3,d As vector3,r As Single=0.00001) As boolean
 End Type
 Constructor Cuboid()
@@ -37,12 +37,12 @@ End Destructor
 Constructor Cuboid(p As Vector3,s As Vector3)
 posi=p
 size=s
-mmin.x=posi.x-size.x/2
-mmax.x=posi.x+size.x/2
-mmin.y=posi.y-size.y/2
-mmax.y=posi.y+size.y/2
-mmin.z=posi.z-size.z/2
-mmax.z=posi.z+size.z/2
+mmin.x=posi.x-size.x*0.5
+mmax.x=posi.x+size.x*0.5
+mmin.y=posi.y-size.y*0.5
+mmax.y=posi.y+size.y*0.5
+mmin.z=posi.z-size.z*0.5
+mmax.z=posi.z+size.z*0.5
 If mmin.x>mmax.x Then Swap mmin.x,mmax.x
 If mmin.y>mmax.y Then Swap mmin.y,mmax.y
 If mmin.z>mmax.z Then Swap mmin.z,mmax.z
@@ -51,17 +51,39 @@ Function Cuboid.PointIsInsideCube(p As Vector3) As boolean
 	If ((p.x>=mmin.x) And (p.x<mmax.x) And (p.y>=mmin.y) And (p.y<mmax.y) And (p.z>=mmin.z) And (p.z<mmax.z)) Then Return TRUE
 	Return FALSE
 End Function
+Function Cuboid.PointIsOnCube(p As Vector3,t As Single=1) As boolean
+	If ((p.x<mmin.x+t) And (p.x>mmax.x-t) And (p.y<mmin.y+t) And (p.y>mmax.y-t) And (p.z<mmin.z+t) And (p.z>mmax.z-t)) Then Return TRUE
+	Return FALSE
+End Function
 Function Cuboid.CubeOverlapsCube(b As Cuboid) As boolean
 	If ((b.mmin.x<=mmax.x) and (b.mmax.x>=mmin.x) and (b.mmin.y<=mmax.y) and (b.mmax.y>=mmin.y) and (b.mmin.z<=mmax.z) And (b.mmax.z>=mmin.z)) Then Return TRUE
 	If ((mmin.x<=b.mmax.x) and (mmax.x>=b.mmin.x) and (mmin.y<=b.mmax.y) and (mmax.y>=b.mmin.y) and (mmin.z<=b.mmax.z) And (mmax.z>=b.mmin.z)) Then Return TRUE
 	Return FALSE
 End Function
-Function Cuboid.PointIsInsideSphere(p As Vector3,sp As Vector3,r As Single) As boolean
+Function Cuboid.PointIsInsideSphere(p As Vector3,sp As Vector3,r As Single) As Boolean
 	Dim x1 As Single=(p.x-sp.x)*(p.x-sp.x)
 	Dim y1 As Single=(p.y-sp.y)*(p.y-sp.y)
 	Dim z1 As Single=(p.z-sp.z)*(p.z-sp.z)
 	Dim ans As Single=x1+y1+z1
 	If ans<=(r*r) Then Return true
+	'If ((p.x>=sp.x-r/2) And (p.x<=sp.x+r/2) And (p.y>=sp.y-r/2) And (p.y<=sp.y+r/2) And (p.z>=sp.z-r/2) And (p.z<=sp.z+r/2)) Then Return TRUE
+	Return FALSE
+End Function
+Function Cuboid.PointIsOnSphere(p As Vector3,sp As Vector3,r As Single,t As Single=1) As Boolean
+	Dim x1 As Single=(p.x-sp.x)*(p.x-sp.x)
+	Dim y1 As Single=(p.y-sp.y)*(p.y-sp.y)
+	Dim z1 As Single=(p.z-sp.z)*(p.z-sp.z)
+	Dim ans As Single=x1+y1+z1
+	If (ans-t<=((r*r))) And (ans+t>=((r*r))) Then Return true
+	'If ((p.x>=sp.x-r/2) And (p.x<=sp.x+r/2) And (p.y>=sp.y-r/2) And (p.y<=sp.y+r/2) And (p.z>=sp.z-r/2) And (p.z<=sp.z+r/2)) Then Return TRUE
+	Return FALSE
+End Function
+Function Cuboid.PointIsOutsideSphere(p As Vector3,sp As Vector3,r As Single) As Boolean
+	Dim x1 As Single=(p.x-sp.x)*(p.x-sp.x)
+	Dim y1 As Single=(p.y-sp.y)*(p.y-sp.y)
+	Dim z1 As Single=(p.z-sp.z)*(p.z-sp.z)
+	Dim ans As Single=x1+y1+z1
+	If ans>(r*r)Then Return true
 	'If ((p.x>=sp.x-r/2) And (p.x<=sp.x+r/2) And (p.y>=sp.y-r/2) And (p.y<=sp.y+r/2) And (p.z>=sp.z-r/2) And (p.z<=sp.z+r/2)) Then Return TRUE
 	Return FALSE
 End Function
@@ -77,12 +99,12 @@ Function Cuboid.SphereOverlapsCube(p As vector3,r As Single) As boolean
 	Dim As single distance = ((x - p.x) * (x - p.x) +(y - p.y) * (y - p.y) + (z - p.z) * (z - p.z))
 	return (distance <= (r*r))
 End Function
-Function Cuboid.PlaneOverlapsCube(v0 As vector3,n As vector3) As boolean
+Function Cuboid.PlaneOverlapsCube(n As vector3,d As Single=1) As boolean
 	' Test if AABB b intersects plane p
 	' Convert AABB to center-extents representation
 	Dim As Vector3 c = Vector3Scale(Vector3Add(this.mmax, this.mmin), 0.5f) ' Compute AABB center
 	Dim As Vector3 e = Vector3Subtract(this.mmax, c) ' Compute positive extents
-	Dim d As Single=-(n.x*v0.x)-(n.y*v0.y)-(n.z*v0.z)
+	'Dim d As Single=-(n.x*v0.x)-(n.y*v0.y)-(n.z*v0.z)
 	' Compute the projection interval radius of b onto L(t) = b.c + t * p.n
 	Dim As Single r = e.x*Abs(n.x) + e.y*Abs(n.y) + e.z*Abs(n.z)
 
@@ -123,20 +145,23 @@ Function Cuboid.RayOverlapsCube(o As vector3,d As vector3,r As Single=0.00001) A
 	return ((tmax*r) >= (tmin*r))
 End Function
 
-Function Cuboid.PointIsOnPlane(p As Vector3,v0 As vector3,n As vector3,t As Single=1) As boolean
+Function Cuboid.PointIsOnPlane(p As Vector3,n As vector3,d As Single=1) As Single
 	'signed distance of point P to plane V0,N
 	dim as single    sb, sn, sd
+	Dim v0 As Vector3
+	v0=Vector3Add(Vector3(0,0,0),Vector3Scale(n,d))
 	sn = -Vector3DotProduct( n, Vector3Subtract(p, v0))
 	sd = Vector3DotProduct(n, n)
 	sb = sn / sd
-
-	dim as Vector3 B = Vector3Add(p ,Vector3Scale( n , sb))
-	B=(Vector3Subtract(p, B))
+	Return sb
+	'Dim as Vector3 B = Vector3Add(p ,Vector3Scale( n , sb))
+	'B=(Vector3Subtract(p, B))
 	'Print B.x,B.y,B.z
 	'Dim l As Single=Vector3Length(B)
 	'Print b.x,b.y,b.z,l
 	'If l<=1 And l>=-0 Then Return true
-	If (B.x<=t) And (B.x>=-t) And (B.y<=t) And (B.y>=-t) And (B.z<=t) And (B.z>=-t) Then Return TRUE
+	'If (B.x<=t) And (B.x>=-t) And (B.y<=t) And (B.y>=-t) And (B.z<=t) And (B.z>=-t) Then Return TRUE
+	
 	Return FALSE
 End Function
 Function Cuboid.PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=1) As boolean
@@ -153,7 +178,7 @@ Function Cuboid.PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=
 	(dgpo_diff.x>=-r) And (dgpo_diff.y>=-r) And (dgpo_diff.z>=-r) Then Return TRUE
 	Return FALSE
 End Function
-Function Cuboid.PointIsInsideCylinder(p As vector3,co As Vector3, cd As Vector3, length As single, radius As single) As boolean
+Function Cuboid.PointIsInsideCylinder(p As vector3,co As Vector3, cd As Vector3, length As single, radius As single) As Single
 
 	Dim As Single dx, dy, dz	' vector d  from line segment point 1 to point 2
 	Dim As Single pdx, pdy, pdz ' vector pd from point 1 to test point
@@ -194,27 +219,29 @@ Function Cuboid.PointIsInsideCylinder(p As vector3,co As Vector3, cd As Vector3,
 
 		dsq = (pdx*pdx + pdy*pdy + pdz*pdz) - (dot*dot)/lengthsq
 		Dim radiussq As Single=radius*radius
-		if( dsq <= radiussq ) Then
-			Return TRUE
+		if( dsq > radiussq ) Then
+			Return -1
 		Else
-			Return FALSE  ' return distance squared to axis
+			Return dsq  ' return distance squared to axis
 		EndIf
 	EndIf
 End Function
 Function Cuboid.CylinderOverlapsCube(co As Vector3, cd As Vector3, length As single, radius As Single) As boolean
 	Return TRUE
 End Function
-type OctTree
-	Declare Constructor()
+
+Type OctTree
 	Declare Constructor(bounds As Cuboid,cap As Long)
 	Declare Destructor()
 	Declare Sub insert(p As Vector3 Ptr)
 	Declare sub getPointsInCube(arr As arrayList Ptr,bound As Cuboid)
-	Declare sub getPointsOnCube(arr As arrayList Ptr,bound As Cuboid)
+	Declare Sub getPointsOnCube(arr As arrayList Ptr,bound As Cuboid,t As Single=1)
 	Declare sub getPointsOutCube(arr As arrayList Ptr,bound As Cuboid)
 	Declare sub getPointsInSphere(arr As arrayList Ptr,sp As vector3,r As Single)
+	Declare sub getPointsOutSphere(arr As arrayList Ptr,sp As vector3,r As Single)
+	Declare sub getPointsOnSphere(arr As arrayList Ptr,sp As vector3,r As Single,t As Single=.1)
 	Declare sub getPointsInCylinder(arr As arrayList Ptr,co As vector3,cd As Vector3,length As Single,r As Single)
-	Declare sub getPointsOnPlane(arr As arrayList Ptr,v0 As vector3,n As vector3)
+	Declare sub getPointsOnPlane(arr As arrayList Ptr,n As vector3,d As Single=1)
 	Declare sub getPointsOnRay(arr As arrayList Ptr,origin As vector3,direction As vector3,r As Single=0.00001)
 
 	Declare sub getCuboidsInCube(arr As arrayList Ptr,bound As Cuboid)
@@ -222,35 +249,107 @@ type OctTree
 	Declare sub getCuboidsOnPlane(arr As arrayList Ptr,v0 As vector3,n As vector3)
 	Declare sub getCuboidsOnRay(arr As arrayList Ptr,v0 As vector3,n As vector3)
 	Declare Sub render()
+	Declare Sub clean()
 
 	bounds As Cuboid
-	points As arrayList Ptr'Vector3
+	points As arrayList'Vector3
 
 	capacity As Long
+	scapacity As Long
 	subdivided As boolean
-	Childs As OctTree ptr
+	As OctTree Ptr Childs (0 To 7)
 End Type
 Constructor OctTree(bounds As Cuboid,cap As Long)
 this.bounds=bounds
 this.capacity=cap
+this.scapacity=cap
 this.subdivided=FALSE
-this.Childs=NULL
-this.points= New arrayList
+For i As Long=0 To 7
+	If Childs(i)<>NULL Then
+		Delete this.Childs(i)
+		this.Childs(i)=NULL
+		'Print"Childs Deleted"
+	EndIf
+Next
 'Print "Construct"
 End Constructor
-Constructor OctTree()
 
-End Constructor
 Destructor OctTree()
+If this.subdivided=FALSE Then
+	If this.points.count>0 Then
+		while (this.points.count>0)
+			Dim p As Vector3 Ptr=points.removeLast()
+			Delete p
+			'p=NULL
+			'Print "Point Deleted ";i
+		Wend
+	EndIf
+Else
+	For i As Long=0 To 7
+		If Childs(i)<>NULL Then
+			'Print "Cleaning Child ";i
+			'this.Childs(i)->clean()
+			'this.Childs[i].subdivided=false
+			'	Delete (Childs[i])
+			'	'This.Childs[i]=NULL
+			Delete this.Childs(i)
+			this.Childs(i)=NULL
+			'Print"Childs Deleted"
+			'				Print "here"',i
+
+		EndIf
+	Next
+EndIf
+this.subdivided=FALSE
+this.capacity=this.scapacity
+Dim b As Cuboid=Cuboid(Vector3(0,0,0),Vector3(256,256,256))
+this.bounds=b
 
 End Destructor
+Sub OctTree.clean()
+	If this.subdivided=FALSE Then
+		If this.points.count>0 Then
+			while (this.points.count>0)
+				Dim p As Vector3 Ptr=points.removeLast()
+				Delete p
+				p=NULL
+				'Print "Point Deleted ";i
+			Wend
+		EndIf
+	Else
 
+		For i As Long=0 To 7
+			If Childs(i)<>NULL Then
+				'Print "Cleaning Child ";i
+				this.Childs(i)->clean()
+				'this.Childs[i].subdivided=false
+				'	Delete (Childs[i])
+				'	'This.Childs[i]=NULL
+				Delete this.Childs(i)
+				this.Childs(i)=NULL
+				'Print"Childs Deleted"
+				'				Print "here"',i
+
+			EndIf
+		Next
+	EndIf
+	this.subdivided=FALSE
+	this.capacity=this.scapacity
+	'this.subdivided=FALSE
+	'this.capacity=64'this.scapacity
+	'Dim b As Cuboid=Cuboid(Vector3(0,0,0),Vector3(256,256,256))
+	'this.bounds=b
+
+End Sub
 Sub OctTree.insert(p As Vector3 Ptr)
 	If Not(this.bounds.PointIsInsideCube(*p)) Then Exit Sub
-	If (this.points->count<this.capacity) And (this.subdivided=FALSE) then
-		this.points->add(p)
-	ElseIf this.subdivided=FALSE then
-		this.Childs=New OctTree[8]'RL_CALLOC(8,SizeOf(OctTree))
+
+	If (this.capacity>=0) Then'And Not(this.subdivided) Then
+		this.points.Add(p)
+		this.capacity-=1
+		'EndIf
+	ElseIf not(this.subdivided) And (this.capacity<0) Then
+		'this.Childs=New OctTree[8]'RL_CALLOC(8,SizeOf(OctTree))
 		Dim b As Cuboid
 		Dim sp As Vector3
 		Dim sv As Vector3=Vector3Scale(this.bounds.size,0.5)
@@ -258,81 +357,112 @@ Sub OctTree.insert(p As Vector3 Ptr)
 		sp=Vector3(bounds.posi.x-sv2.x,bounds.posi.y-sv2.y,bounds.posi.z-sv2.z)
 
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		Childs[0].Constructor(b,this.capacity)
+		Childs(0)=New OctTree(b,this.scapacity)
+
 
 		sp=Vector3(bounds.posi.x+sv2.x,bounds.posi.y-sv2.y,bounds.posi.z-sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		Childs[1].Constructor(b,this.capacity)
+		Childs(1)=New OctTree(b,this.scapacity)
 
 		sp=Vector3(bounds.posi.x-sv2.x,bounds.posi.y+sv2.y,bounds.posi.z-sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		Childs[2].Constructor(b,this.capacity)
+		Childs(2)=New OctTree(b,this.scapacity)
 
 		sp=Vector3(bounds.posi.x+sv2.x,bounds.posi.y+sv2.y,bounds.posi.z-sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		Childs[3].Constructor(b,this.capacity)
+		Childs(3)=New OctTree(b,this.scapacity)
 
 		sp=Vector3(bounds.posi.x-sv2.x,bounds.posi.y-sv2.y,bounds.posi.z+sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		Childs[4].Constructor(b,this.capacity)
+		Childs(4)=New OctTree(b,this.scapacity)
 
 		sp=Vector3(bounds.posi.x-sv2.x,bounds.posi.y+sv2.y,bounds.posi.z+sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		Childs[5].Constructor(b,this.capacity)
+		Childs(5)=New OctTree(b,this.scapacity)
 
 		sp=Vector3(bounds.posi.x+sv2.x,bounds.posi.y-sv2.y,bounds.posi.z+sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		Childs[6].Constructor(b,this.capacity)
+		Childs(6)=New OctTree(b,this.scapacity)
 
 		sp=Vector3(bounds.posi.x+sv2.x,bounds.posi.y+sv2.y,bounds.posi.z+sv2.z)
 		b=Cuboid(Vector3(sp.x,sp.y,sp.z),Vector3(sv.x,sv.y,sv.z))
-		Childs[7].Constructor(b,this.capacity)
+		Childs(7)=New OctTree(b,this.scapacity)
+
+
 
 		this.subdivided=TRUE
-	EndIf
-	If Childs<>NULL Then
+		'this.capacity=1
+		'Print this.capacity
+
 		'remove point from this cuboid and insert in the child
-		While this.points->count>0
-			dim i As Long=this.points->count-1
-			Dim p1 As Vector3 Ptr=this.points->get(i)
-			Childs[0].insert(p1)
-			Childs[1].insert(p1)
-			Childs[2].insert(p1)
-			Childs[3].insert(p1)
-			Childs[4].insert(p1)
-			Childs[5].insert(p1)
-			Childs[6].insert(p1)
-			Childs[7].insert(p1)
-			this.points->removeLast()
-		Wend
-		'insert point in child
-		Childs[0].insert(p)
-		Childs[1].insert(p)
-		Childs[2].insert(p)
-		Childs[3].insert(p)
-		Childs[4].insert(p)
-		Childs[5].insert(p)
-		Childs[6].insert(p)
-		Childs[7].insert(p)
+		If this.points.count>0 Then
+			while (this.points.count>0)
+				Dim p1 As Vector3 Ptr=this.points.removeLast()
+				For i As Long=0 To 7
+					'If this.Childs(i)<>NULL Then
+						this.Childs(i)->insert(p1)
+					'EndIf
+				Next
+				'Delete p1
+				'p1=NULL
+			Wend
+			'		EndIf
+			'Childs[0].insert(p)
+			'Childs[1].insert(p)
+			'Childs[2].insert(p)
+			'Childs[3].insert(p)
+			'Childs[4].insert(p)
+			'Childs[5].insert(p)
+			'Childs[6].insert(p)
+			'Childs[7].insert(p)
+		EndIf
 	EndIf
-	'endif
+	If this.subdivided=TRUE Then
+
+		'insert point in child
+		For i As Long=0 To 7
+			'If Childs(i)<>NULL Then
+				this.Childs(i)->insert(p)
+			'EndIf
+		Next
+	EndIf
 End Sub
 Sub OctTree.getPointsInCube(arr As arrayList Ptr,bound As Cuboid)
 	If (this.bounds.CubeOverlapsCube(bound)) Then
 		'Else
 		If Not(this.subdivided) Then
-			For i As Long =0 To this.points->count-1
-				Dim p As Vector3 Ptr=points->Get(i)
+			For i As Long =0 To this.points.count-1
+				Dim p As Vector3 Ptr=points.Get(i)
 				If bound.PointIsInsideCube(*p) Then
-					arr->add(p)
+					arr->Add(p)
 				EndIf
 			Next
 		Else
-			If Childs<>NULL Then
 				For i As Long = 0 To 7
-					Childs[i].getPointsInCube(arr,bound)
-				Next
+			If Childs(i)<>NULL Then
+					Childs(i)->getPointsInCube(arr,bound)
+				EndIf
+			Next
+		endif
+	EndIf
+
+End Sub
+Sub OctTree.getPointsOnCube(arr As arrayList Ptr,bound As Cuboid,t As Single=1)
+	If (this.bounds.CubeOverlapsCube(bound)) Then
+		'Else
+		If Not(this.subdivided) Then
+			For i As Long =0 To this.points.count-1
+				Dim p As Vector3 Ptr=points.Get(i)
+				If bound.PointIsOnCube(*p,t) Then
+					arr->Add(p)
+				EndIf
+			Next
+		Else
+				For i As Long = 0 To 7
+			If Childs(i)<>NULL Then
+					Childs(i)->getPointsOnCube(arr,bound,t)
 			EndIf
+				Next
 		endif
 	EndIf
 
@@ -340,17 +470,17 @@ End Sub
 Sub OctTree.getPointsOutCube(arr As arrayList Ptr,bound As Cuboid)
 	If (this.bounds.CubeOverlapsCube(bound)) Then
 		'Else
-		For i As Long =0 To this.points->count-1
-			Dim p As Vector3 Ptr=points->Get(i)
-			If bound.PointIsInsideCube(*p) Then
+		For i As Long =0 To this.points.count-1
+			Dim p As Vector3 Ptr=points.Get(i)
+			If Not(bound.PointIsInsideCube(*p)) Then
 				arr->add(p)
 			EndIf
 		Next
-		If Childs<>NULL Then
 			For i As Long = 0 To 7
-				Childs[i].getPointsInCube(arr,bound)
-			Next
+		If Childs(i)<>NULL Then
+				Childs(i)->getPointsOutCube(arr,bound)
 		EndIf
+			Next
 	EndIf
 
 End Sub
@@ -358,58 +488,99 @@ Sub OctTree.getPointsInSphere(arr As arrayList Ptr,sp As vector3,r As single)
 	If (this.bounds.SphereOverlapsCube(sp,r)) Then
 		'Else
 		If Not(this.subdivided) Then
-			For i As Long =0 To this.points->count-1
-				Dim p As Vector3 Ptr=points->Get(i)
+			For i As Long =0 To this.points.count-1
+				Dim p As Vector3 Ptr=points.Get(i)
 				If This.bounds.PointIsInsideSphere(*p,sp,r) Then
 					arr->add(p)
 				EndIf
 			Next
 		else
-			If Childs<>NULL Then
 				For i As Long = 0 To 7
-					Childs[i].getPointsInSphere(arr,sp,r)
-				Next
+			If Childs(i)<>NULL Then
+					Childs(i)->getPointsInSphere(arr,sp,r)
 			EndIf
+				Next
+		EndIf
+	EndIf
+
+End Sub
+Sub OctTree.getPointsOnSphere(arr As arrayList Ptr,sp As vector3,r As Single,t As Single=.1)
+	If (this.bounds.SphereOverlapsCube(sp,r)) Then
+		'Else
+		If Not(this.subdivided) Then
+			For i As Long =0 To this.points.count-1
+				Dim p As Vector3 Ptr=points.Get(i)
+				If This.bounds.PointIsOnSphere(*p,sp,r,t) Then
+					arr->add(p)
+				EndIf
+			Next
+		else
+				For i As Long = 0 To 7
+			If Childs(i)<>NULL Then
+					Childs(i)->getPointsOnSphere(arr,sp,r,t)
+			EndIf
+				Next
+		EndIf
+	EndIf
+
+End Sub
+Sub OctTree.getPointsOutSphere(arr As arrayList Ptr,sp As vector3,r As Single)
+	If (this.bounds.SphereOverlapsCube(sp,r)) Then
+		'Else
+		If Not(this.subdivided) Then
+			For i As Long =0 To this.points.count-1
+				Dim p As Vector3 Ptr=points.Get(i)
+				If Not(This.bounds.PointIsInsideSphere(*p,sp,r)) Then
+					arr->add(p)
+				EndIf
+			Next
+		else
+				For i As Long = 0 To 7
+			If Childs(i)<>NULL Then
+					Childs(i)->getPointsOutSphere(arr,sp,r)
+			EndIf
+				Next
 		EndIf
 	EndIf
 
 End Sub
 sub OctTree.getPointsInCylinder(arr As arrayList Ptr,co As vector3,cd As Vector3,length As Single,r As Single)
 	If (this.bounds.CylinderOverlapsCube(co,cd,length,r)) Then
-		'Else
 		If Not(this.subdivided) Then
-			For i As Long =0 To this.points->count-1
-				Dim p As Vector3 Ptr=points->Get(i)
-				If This.bounds.PointIsInsideCylinder(*p,co,cd,length,r) Then
+			'Else
+			For i As Long =0 To this.points.count-1
+				Dim p As Vector3 Ptr=points.Get(i)
+				If This.bounds.PointIsInsideCylinder(*p,co,cd,length,r)<-1 Then
 					arr->add(p)
 				EndIf
 			Next
 		else
-			If Childs<>NULL Then
 				For i As Long = 0 To 7
-					Childs[i].getPointsInCylinder(arr,co,cd,length,r)
-				Next
+			If Childs(i)<>NULL Then
+					Childs(i)->getPointsInCylinder(arr,co,cd,length,r)
 			EndIf
+				Next
 		EndIf
 	EndIf
 
 End Sub
-sub OctTree.getPointsOnPlane(arr As arrayList Ptr,v0 As vector3,n As vector3)
-	If (this.bounds.PlaneOverlapsCube(v0,n)) Then
+sub OctTree.getPointsOnPlane(arr As arrayList Ptr,n As vector3,d As Single=1)
+	If (this.bounds.PlaneOverlapsCube(n,d)) Then
 		'Else
 		If Not(this.subdivided) Then
-			For i As Long =0 To this.points->count-1
-				Dim p As Vector3 Ptr=points->Get(i)
-				If This.bounds.PointIsOnPlane(*p,v0,n) Then
-					arr->add(p)
+			For i As Long =0 To this.points.count-1
+				Dim p As Vector3 Ptr=points.Get(i)
+				Dim s As Single=This.bounds.PointIsOnPlane(*p,n,d)
+				If (s+1>0) And (s-1<0) Then
+				arr->add(p)
 				EndIf
 			Next
 		else
-			If Childs<>NULL Then
 				For i As Long = 0 To 7
-					Childs[i].getPointsOnPlane(arr,v0,n)
-				Next
+			If Childs(i)<>NULL Then
+					Childs(i)->getPointsOnPlane(arr,n,d)
 			EndIf
+				Next
 		EndIf
 	EndIf
 End Sub
@@ -418,35 +589,37 @@ sub OctTree.getPointsOnRay(arr As arrayList Ptr,origin As vector3,direction As v
 	If (this.bounds.RayOverlapsCube(origin,direction,r)) Then
 		'Else
 		If Not(this.subdivided) Then
-			For i As Long =0 To this.points->count-1
-				Dim p As Vector3 Ptr=points->Get(i)
+			For i As Long =0 To this.points.count-1
+				Dim p As Vector3 Ptr=points.Get(i)
 				If This.bounds.PointIsOnRay(*p,origin,direction,r) Then
 					arr->add(p)
 				EndIf
 			Next
 		else
-			If Childs<>NULL Then
 				For i As Long = 0 To 7
-					Childs[i].getPointsOnRay(arr,origin,direction,r)
-				Next
+			If Childs(i)<>NULL Then
+					Childs(i)->getPointsOnRay(arr,origin,direction,r)
 			EndIf
+				Next
 		EndIf
 	EndIf
 End Sub
 
 Sub OctTree.render()
 	If (this.subdivided=TRUE) Then
-		If (this.Childs<>NULL) Then
-			For i As Long=0 To 7
-				this.Childs[i].render()
-			Next
-		EndIf
-	Else
+		For i As Long=0 To 7
+			'If (this.Childs(i)<>NULL) Then
+				this.Childs(i)->render()
+			'EndIf
+		Next
+	ElseIf(this.subdivided=FALSE) Then
 		DrawCubeWiresV(this.bounds.posi,this.bounds.size,RayColor(0,0,0,16))
+		'If this.points.count>0 Then
+		'	For i As Long=0 To this.points.count-1
+		'		Dim p As Vector3 Ptr=this.points.Get(i)
+		'		DrawCube(*p,.5,.5,.5,RayColor(0,0,0,64))
+		'	Next
+		'EndIf
 	EndIf
-	For i As Long=0 To this.points->count-1
-		Dim p As Vector3 Ptr=this.points->get(i)
-		DrawCube(*p,.5,.5,.5,RayColor(0,0,0,64))
-	Next
-
+	'Print this.points.count
 End Sub
