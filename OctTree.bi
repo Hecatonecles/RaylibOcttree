@@ -11,7 +11,7 @@ Type Cuboid
 	mmin As Vector3
 	mmax As Vector3
 	'BBox(0 To 7) As Vector3
-	Declare Function PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=1) As boolean
+	Declare Function PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=1,l As Single=512) As boolean
 	Declare Function PointIsOnPlane(p As Vector3,n As vector3,d As Single=1) As single
 	Declare Function PointIsOnFrontOffPlane(p As Vector3,v0 As vector3,n As vector3,d As Single=1) As boolean
 	Declare Function PointIsOnBackOffPlane(p As Vector3,v0 As vector3,n As vector3,d As Single=1) As boolean
@@ -154,8 +154,9 @@ Function Cuboid.PointIsOnPlane(p As Vector3,n As vector3,d As Single=1) As Singl
 	sd = Vector3DotProduct(n, n)
 	sb = sn / sd
 	Return sb
-	'Dim as Vector3 B = Vector3Add(p ,Vector3Scale( n , sb))
-	'B=(Vector3Subtract(p, B))
+	'Dim as Vector3 B = Vector3Normalize(Vector3Subtract(p, B))
+	'Print (Vector3DotProduct(B,B))
+	'Return (Vector3DotProduct(B,B))
 	'Print B.x,B.y,B.z
 	'Dim l As Single=Vector3Length(B)
 	'Print b.x,b.y,b.z,l
@@ -164,67 +165,31 @@ Function Cuboid.PointIsOnPlane(p As Vector3,n As vector3,d As Single=1) As Singl
 	
 	Return FALSE
 End Function
-Function Cuboid.PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=1) As boolean
-	Dim gpo As vector3=Vector3Subtract(p,o)
-	gpo=vector3Normalize(gpo)
-	d=vector3Normalize(d)
-	Dim c As vector3=Vector3CrossProduct(o,d)
-	Dim dgpo_diff As vector3=Vector3Subtract(d,gpo)
-	dgpo_diff=vector3Normalize(dgpo_diff)
-	'Dim rr As Vector3=Vector3Scale(c,r)
-	'r=Vector3Length(rr)
-	'Print a.x,a.y,a.z
-	If (dgpo_diff.x<=r) And (dgpo_diff.y<=r) And (dgpo_diff.z<=r) And _
-	(dgpo_diff.x>=-r) And (dgpo_diff.y>=-r) And (dgpo_diff.z>=-r) Then Return TRUE
-	Return FALSE
+Function Cuboid.PointIsOnRay(p As Vector3,o As vector3,d As vector3,r As Single=1,l As Single=512) As boolean
+	Dim a As vector3=o
+	Dim b As vector3=Vector3Add(a,vector3scale(d,l))
+	Dim av As vector3=vector3Subtract(p,a)
+	Dim ab As vector3=vector3Subtract(b,a)
+	Dim avab As Single=Vector3DotProduct(av,ab)
+	If avab<=0 Then Return FALSE
+	Dim bv As vector3=Vector3Subtract(p,b)
+	Dim bvab As Single=Vector3DotProduct(bv,ab)
+	If bvab>=0 Then Return FALSE
+	Dim abav As vector3=vector3crossproduct(ab,av)
+	Return abs(vector3dotproduct(abav,abav)/vector3dotproduct(ab,ab)<r) 	
 End Function
 Function Cuboid.PointIsInsideCylinder(p As vector3,co As Vector3, cd As Vector3, length As single, radius As single) As Single
-
-	Dim As Single dx, dy, dz	' vector d  from line segment point 1 to point 2
-	Dim As Single pdx, pdy, pdz ' vector pd from point 1 to test point
-	Dim As Single dot, dsq
-
-	dx = (cd.x*length) - co.x	' translate so pt1 is origin.  Make vector from
-	dy = (cd.y*length) - co.y  ' pt1 to pt2.  Need for this is easily eliminated
-	dz = (cd.z*length) - co.z
-
-	pdx = p.x - co.x		' vector from pt1 to test point.
-	pdy = p.y - co.y
-	pdz = p.z - co.z
-
-	' Dot the d and pd vectors to see if point lies behind the
-	' cylinder cap at pt1.x, pt1.y, pt1.z
-
-	dot = (pdx * dx + pdy * dy + pdz * dz)
-
-	' If dot is less than zero the point is behind the pt1 cap.
-	' If greater than the cylinder axis line segment length squared
-	' then the point is outside the other end cap at pt2.
-	Dim lengthsq As Single=length*length
-	if( ((dot) > 0.0f) and ((dot) < lengthsq) ) Then
-		'	Return FALSE
-		'else
-		' Point lies within the parallel caps, so find
-		' distance squared from point to line, using the fact that sin^2 + cos^2 = 1
-		' the dot = cos() * |d||pd|, and cross*cross = sin^2 * |d|^2 * |pd|^2
-		' Carefull: '*' means mult for scalars and dotproduct for vectors
-		' In short, where dist is pt distance to cyl axis:
-		' dist = sin( pd to d ) * |pd|
-		' distsq = dsq = (1 - cos^2( pd to d)) * |pd|^2
-		' dsq = ( 1 - (pd * d)^2 / (|pd|^2 * |d|^2) ) * |pd|^2
-		' dsq = pd * pd - dot * dot / lengthsq
-		'  where lengthsq is d*d or |d|^2 that is passed into this function
-
-		' distance squared to the cylinder axis:
-
-		dsq = (pdx*pdx + pdy*pdy + pdz*pdz) - (dot*dot)/lengthsq
-		Dim radiussq As Single=radius*radius
-		if( dsq > radiussq ) Then
-			Return -1
-		Else
-			Return dsq  ' return distance squared to axis
-		EndIf
-	EndIf
+	Dim a As vector3=co
+	Dim b As vector3=Vector3Add(a,vector3scale(cd,length))
+	Dim av As vector3=vector3Subtract(p,a)
+	Dim ab As vector3=vector3Subtract(b,a)
+	Dim avab As Single=Vector3DotProduct(av,ab)
+	If avab<=0 Then Return FALSE
+	Dim bv As vector3=Vector3Subtract(p,b)
+	Dim bvab As Single=Vector3DotProduct(bv,ab)
+	If bvab>=0 Then Return FALSE
+	Dim abav As vector3=vector3crossproduct(ab,av)
+	Return abs(vector3dotproduct(abav,abav)/vector3dotproduct(ab,ab)<=radius) 	
 End Function
 Function Cuboid.CylinderOverlapsCube(co As Vector3, cd As Vector3, length As single, radius As Single) As boolean
 	Return TRUE
@@ -550,7 +515,7 @@ sub OctTree.getPointsInCylinder(arr As arrayList Ptr,co As vector3,cd As Vector3
 			'Else
 			For i As Long =0 To this.points.count-1
 				Dim p As Vector3 Ptr=points.Get(i)
-				If This.bounds.PointIsInsideCylinder(*p,co,cd,length,r)<-1 Then
+				If This.bounds.PointIsInsideCylinder(*p,co,cd,length,r) Then
 					arr->add(p)
 				EndIf
 			Next
